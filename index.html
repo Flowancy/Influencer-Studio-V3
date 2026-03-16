@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Influencer Studio</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#0f0f0f; --bg2:#161616; --bg3:#1e1e1e; --bg4:#252525;
+    --border:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.14);
+    --text:#f0ede8; --text2:#8a8782; --text3:#5a5855;
+    --accent:#e8d5b0; --accent2:#c4a96e;
+    --ok:#5a9e6f; --err:#c45a5a; --info:#5a82c4;
+    --font:'DM Sans',system-ui,sans-serif; --mono:'DM Mono',monospace;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@300;400&display=swap');
+  body { font-family:var(--font); font-size:13px; color:var(--text); background:var(--bg); height:100vh; overflow:hidden; display:flex; }
+  .sidebar { width:300px; min-width:300px; background:var(--bg2); border-right:0.5px solid var(--border); display:flex; flex-direction:column; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--bg4) transparent; }
+  .sidebar-logo { padding:22px 20px 16px; border-bottom:0.5px solid var(--border); }
+  .sidebar-logo h1 { font-size:14px; font-weight:500; letter-spacing:0.04em; color:var(--accent); }
+  .sidebar-logo p  { font-size:11px; color:var(--text3); margin-top:3px; }
+  .sec { padding:16px 20px; border-bottom:0.5px solid var(--border); }
+  .sec-label { font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:10px; }
+  input[type="text"], input[type="password"], textarea {
+    width:100%; background:var(--bg3); border:0.5px solid var(--border); border-radius:6px;
+    padding:8px 10px; font-size:12px; font-family:var(--font); color:var(--text);
+    outline:none; transition:border-color 0.15s; margin-bottom:7px;
+  }
+  input[type="text"]:focus, input[type="password"]:focus, textarea:focus { border-color:var(--border2); }
+  input::placeholder, textarea::placeholder { color:var(--text3); }
+  input[type="password"] { font-family:var(--mono); font-size:11px; }
+  textarea { resize:none; height:60px; line-height:1.5; }
+  .girl-entry { background:var(--bg3); border:0.5px solid var(--border); border-radius:8px; padding:12px; margin-bottom:10px; }
+  .girl-top { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .girl-top input { flex:1; margin:0; }
+  .girl-avatar-circle { width:30px; height:30px; border-radius:50%; object-fit:cover; border:0.5px solid var(--border2); display:none; flex-shrink:0; }
+  .btn-remove { background:none; border:none; cursor:pointer; color:var(--text3); font-size:16px; line-height:1; padding:2px 5px; border-radius:4px; transition:color 0.15s,background 0.15s; }
+  .btn-remove:hover { color:var(--err); background:rgba(196,90,90,0.12); }
+  .drop-zone { border:0.5px dashed var(--border2); border-radius:6px; padding:10px 12px; text-align:center; cursor:pointer; position:relative; transition:background 0.15s; }
+  .drop-zone:hover { background:var(--bg4); }
+  .drop-zone.filled { border-style:solid; border-color:var(--accent2); }
+  .drop-zone input[type="file"] { position:absolute; inset:0; opacity:0; cursor:pointer; margin:0; padding:0; background:none; border:none; }
+  .dz-text { font-size:11px; color:var(--text2); }
+  .dz-text b { color:var(--accent); font-weight:500; }
+  .inspo-thumbs { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; }
+  .inspo-thumb  { width:44px; height:44px; border-radius:5px; object-fit:cover; border:0.5px solid var(--border); }
+  .inspo-more   { font-size:10px; color:var(--text3); margin-top:5px; }
+  .btn-add-girl { background:none; border:0.5px dashed var(--border2); border-radius:6px; padding:8px; width:100%; color:var(--text2); font-size:12px; cursor:pointer; font-family:var(--font); transition:background 0.15s,color 0.15s; margin-top:2px; }
+  .btn-add-girl:hover { background:var(--bg4); color:var(--text); }
+  .btn-generate { margin:16px 20px 20px; padding:11px 16px; background:var(--accent); color:#1a1509; border:none; border-radius:8px; font-size:13px; font-weight:500; font-family:var(--font); cursor:pointer; letter-spacing:0.02em; transition:opacity 0.15s,transform 0.1s; }
+  .btn-generate:hover { opacity:0.9; }
+  .btn-generate:active { transform:scale(0.99); }
+  .btn-generate:disabled { opacity:0.35; cursor:not-allowed; }
+  .main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+  .main-header { padding:14px 24px; border-bottom:0.5px solid var(--border); background:var(--bg2); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+  .main-header h2 { font-size:13px; font-weight:400; color:var(--text2); }
+  .badge { font-size:10px; letter-spacing:0.06em; text-transform:uppercase; padding:3px 10px; border-radius:20px; font-weight:500; }
+  .badge-idle    { background:var(--bg4); color:var(--text3); }
+  .badge-running { background:rgba(90,130,196,0.15); color:var(--info); }
+  .badge-done    { background:rgba(90,158,111,0.15); color:var(--ok); }
+  .badge-error   { background:rgba(196,90,90,0.15); color:var(--err); }
+  .output { flex:1; overflow-y:auto; padding:28px; scrollbar-width:thin; scrollbar-color:var(--bg4) transparent; }
+  .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:12px; color:var(--text3); }
+  .empty-state svg { opacity:0.18; }
+  .empty-state p { font-size:12px; letter-spacing:0.04em; }
+  .girl-block { margin-bottom:40px; }
+  .girl-block-head { display:flex; align-items:center; gap:10px; margin-bottom:16px; padding-bottom:10px; border-bottom:0.5px solid var(--border); }
+  .girl-block-avatar { width:28px; height:28px; border-radius:50%; object-fit:cover; border:0.5px solid var(--border2); }
+  .girl-block-name  { font-size:14px; font-weight:500; color:var(--accent); }
+  .girl-block-count { font-size:11px; color:var(--text3); margin-left:auto; }
+  .img-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
+  .img-card { border-radius:8px; overflow:hidden; border:0.5px solid var(--border); background:var(--bg3); }
+  .img-card img { width:100%; aspect-ratio:4/5; object-fit:cover; display:block; }
+  .img-card-footer { padding:7px 9px; font-size:10px; color:var(--text3); display:flex; align-items:center; justify-content:space-between; }
+  .img-dl { color:var(--accent2); text-decoration:none; font-size:13px; }
+  .img-dl:hover { color:var(--accent); }
+  .skeleton { background:var(--bg3); border-radius:8px; border:0.5px solid var(--border); overflow:hidden; }
+  .sk-img { width:100%; aspect-ratio:4/5; background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%); background-size:200% 100%; animation:shimmer 1.6s infinite; }
+  .sk-bar { height:24px; margin:7px 9px; background:var(--bg4); border-radius:3px; animation:shimmer 1.6s infinite; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  .img-error { border-radius:8px; border:0.5px solid rgba(196,90,90,0.3); background:rgba(196,90,90,0.06); display:flex; align-items:center; justify-content:center; aspect-ratio:4/5; padding:12px; text-align:center; font-size:10px; color:var(--err); line-height:1.5; }
+  .log-wrap { border-top:0.5px solid var(--border); background:var(--bg2); max-height:130px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--bg4) transparent; display:none; flex-shrink:0; }
+  .log-inner { padding:8px 20px; }
+  .log-line { font-family:var(--mono); font-size:10px; color:var(--text3); line-height:1.8; }
+  .log-line.info { color:var(--info); }
+  .log-line.ok   { color:var(--ok); }
+  .log-line.err  { color:var(--err); }
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <h1>✦ AI Influencer Studio</h1>
+    <p>Generate consistent profiles at scale</p>
+  </div>
+  <div class="sec">
+    <div class="sec-label">API Keys</div>
+    <input type="password" id="openai-key" placeholder="OpenAI API key  (sk-...)" autocomplete="off" />
+    <input type="password" id="apixo-key"  placeholder="Apixo.ai API key"         autocomplete="off" />
+  </div>
+  <div class="sec">
+    <div class="sec-label">Girl</div>
+    <div id="girls-list"></div>
+    <button class="btn-add-girl" onclick="addGirl()">+ Add another girl</button>
+  </div>
+  <div class="sec">
+    <div class="sec-label">Inspiration Photos</div>
+    <div class="drop-zone" id="inspo-drop">
+      <input type="file" id="inspo-input" accept="image/*" multiple onchange="handleInspo(this)" />
+      <div class="dz-text">Drop photos or <b>browse</b></div>
+    </div>
+    <div class="inspo-thumbs" id="inspo-thumbs"></div>
+    <div class="inspo-more"   id="inspo-more"></div>
+  </div>
+  <div class="sec">
+    <div class="sec-label">Additional Preferences <span style="color:var(--text3);font-size:9px;letter-spacing:0">(optional)</span></div>
+    <textarea id="prefs" placeholder="e.g. outdoor setting, golden hour lighting…"></textarea>
+  </div>
+  <button class="btn-generate" id="gen-btn" onclick="generate()">Generate Photos</button>
+</div>
+
+<div class="main">
+  <div class="main-header">
+    <h2>Generated Photos</h2>
+    <span class="badge badge-idle" id="status-badge">Idle</span>
+  </div>
+  <div class="output" id="output">
+    <div class="empty-state" id="empty-state">
+      <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="7" y="11" width="38" height="30" rx="3" stroke="#f0ede8" stroke-width="1.4"/>
+        <circle cx="18" cy="22" r="4.5" stroke="#f0ede8" stroke-width="1.4"/>
+        <path d="M7 34l10-8 8 7 7-6 13 12" stroke="#f0ede8" stroke-width="1.4" stroke-linejoin="round"/>
+      </svg>
+      <p>Photos will appear here after generation</p>
+    </div>
+  </div>
+  <div class="log-wrap" id="log-wrap">
+    <div class="log-inner" id="log-inner"></div>
+  </div>
+</div>
+
+<script>
+let girls = [];
+let inspoFiles = [];
+
+// ── Girl management ──────────────────────────────────────
+function addGirl() {
+  girls.push({ id: Date.now(), name: '', avatarFile: null, avatarUrl: null });
+  renderGirls();
+}
+function removeGirl(id) {
+  girls = girls.filter(g => g.id !== id);
+  renderGirls();
+}
+function renderGirls() {
+  const list = document.getElementById('girls-list');
+  list.innerHTML = '';
+  girls.forEach(g => {
+    const el = document.createElement('div');
+    el.className = 'girl-entry';
+    el.innerHTML =
+      '<div class="girl-top">' +
+        '<img class="girl-avatar-circle" id="av-' + g.id + '" ' + (g.avatarUrl ? 'src="' + g.avatarUrl + '" style="display:block"' : '') + ' />' +
+        '<input type="text" placeholder="Girl\'s name" value="' + g.name + '" oninput="updateName(' + g.id + ', this.value)" />' +
+        '<button class="btn-remove" onclick="removeGirl(' + g.id + ')">×</button>' +
+      '</div>' +
+      '<div class="drop-zone ' + (g.avatarFile ? 'filled' : '') + '">' +
+        '<input type="file" accept="image/*" onchange="handleAvatar(' + g.id + ', this)" />' +
+        '<div class="dz-text" id="avlbl-' + g.id + '">' + (g.avatarFile ? '✓ ' + g.avatarFile.name : 'Upload avatar photo') + '</div>' +
+      '</div>';
+    list.appendChild(el);
+  });
+}
+function updateName(id, v) {
+  const g = girls.find(x => x.id === id);
+  if (g) g.name = v.trim();
+}
+function handleAvatar(id, input) {
+  const f = input.files[0]; if (!f) return;
+  const g = girls.find(x => x.id === id); if (!g) return;
+  g.avatarFile = f;
+  g.avatarUrl  = URL.createObjectURL(f);
+  const img = document.getElementById('av-' + id);
+  if (img) { img.src = g.avatarUrl; img.style.display = 'block'; }
+  const lbl = document.getElementById('avlbl-' + id);
+  if (lbl) lbl.textContent = '✓ ' + f.name;
+  input.closest('.drop-zone').classList.add('filled');
+}
+
+// ── Inspiration photos ───────────────────────────────────
+function handleInspo(input) {
+  inspoFiles = Array.from(input.files);
+  const grid = document.getElementById('inspo-thumbs');
+  const more = document.getElementById('inspo-more');
+  grid.innerHTML = '';
+  inspoFiles.slice(0, 9).forEach(f => {
+    const img = document.createElement('img');
+    img.className = 'inspo-thumb';
+    img.src = URL.createObjectURL(f);
+    grid.appendChild(img);
+  });
+  more.textContent = inspoFiles.length > 9
+    ? '+' + (inspoFiles.length - 9) + ' more · ' + inspoFiles.length + ' total'
+    : inspoFiles.length + ' photo' + (inspoFiles.length !== 1 ? 's' : '');
+  document.getElementById('inspo-drop').classList.add('filled');
+}
+
+// ── Utilities ────────────────────────────────────────────
+function log(msg, type) {
+  const wrap = document.getElementById('log-wrap');
+  wrap.style.display = 'block';
+  const line = document.createElement('div');
+  line.className = 'log-line' + (type ? ' ' + type : '');
+  line.textContent = '[' + new Date().toLocaleTimeString() + ']  ' + msg;
+  document.getElementById('log-inner').appendChild(line);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+function setStatus(s) {
+  const b = document.getElementById('status-badge');
+  b.className = 'badge badge-' + s;
+  b.textContent = ({idle:'Idle', running:'Generating…', done:'Done', error:'Error'})[s] || s;
+}
+function fileToBase64(file) {
+  return new Promise(function(res, rej) {
+    var r = new FileReader();
+    r.onload  = function() { res(r.result.split(',')[1]); };
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+function sleep(ms) { return new Promise(function(r){ setTimeout(r, ms); }); }
+
+// ── Output rendering ─────────────────────────────────────
+function renderSkeletons(activeGirls) {
+  const output = document.getElementById('output');
+  const es = document.getElementById('empty-state');
+  if (es) es.remove();
+  activeGirls.forEach(function(g) {
+    var old = document.getElementById('block-' + g.id);
+    if (old) old.remove();
+    var block = document.createElement('div');
+    block.className = 'girl-block';
+    block.id = 'block-' + g.id;
+    block.innerHTML =
+      '<div class="girl-block-head">' +
+        (g.avatarUrl ? '<img class="girl-block-avatar" src="' + g.avatarUrl + '" />' : '') +
+        '<span class="girl-block-name">' + g.name + '</span>' +
+        '<span class="girl-block-count" id="cnt-' + g.id + '">0 / ' + inspoFiles.length + '</span>' +
+      '</div>' +
+      '<div class="img-grid" id="grid-' + g.id + '"></div>';
+    output.appendChild(block);
+    var grid = document.getElementById('grid-' + g.id);
+    for (var i = 0; i < inspoFiles.length; i++) {
+      var sk = document.createElement('div');
+      sk.className = 'skeleton';
+      sk.id = 'sk-' + g.id + '-' + i;
+      sk.innerHTML = '<div class="sk-img"></div><div class="sk-bar"></div>';
+      grid.appendChild(sk);
+    }
+  });
+}
+function placeImage(girlId, idx, url, label) {
+  var sk = document.getElementById('sk-' + girlId + '-' + idx);
+  if (!sk) return;
+  var card = document.createElement('div');
+  card.className = 'img-card';
+  card.innerHTML =
+    '<img src="' + url + '" loading="lazy" />' +
+    '<div class="img-card-footer">' +
+      '<span>' + label + '</span>' +
+      '<a class="img-dl" href="' + url + '" download="' + label + '.png" target="_blank">↓</a>' +
+    '</div>';
+  sk.replaceWith(card);
+}
+function placeError(girlId, idx, msg) {
+  var sk = document.getElementById('sk-' + girlId + '-' + idx);
+  if (!sk) return;
+  var el = document.createElement('div');
+  el.className = 'img-error';
+  el.textContent = msg;
+  sk.replaceWith(el);
+}
+
+// ── Step 1: Ask GPT-4o for the Nano Banana 2 prompt ──────
+async function buildPrompt(openaiKey, girlName, avatarB64, avatarMime, inspoB64, inspoMime, prefs) {
+  // Exact user message as specified — with optional prefs appended
+  var userMsg = 'Can you write a json prompt for nano banana 2 to add ' + girlName +
+    ' (first photo (attachment)) to the second photo (attachment), instead of the girl on the second photo.' +
+    ' But make sure ' + girlName + ' is wearing the same clothes as the girl on the second photo.' +
+    ' Also make sure that the generation has the same face and the same hair as ' + girlName + '.' +
+    ' The photo must look like it was taken with an iphone 17 pro with lens 1x' +
+    (prefs ? '. Additional requirements: ' + prefs : '') + '.';
+
+  var body = {
+    model: 'gpt-4o',
+    max_tokens: 800,
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a prompt engineer for AI image generation models. ' +
+                 'When asked to write a JSON prompt, respond ONLY with a raw JSON object ' +
+                 'containing a single key "prompt" whose value is the generation prompt string. ' +
+                 'No markdown, no code fences, no explanation — just the JSON object.'
+      },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: userMsg },
+          { type: 'image_url', image_url: { url: 'data:' + avatarMime + ';base64,' + avatarB64, detail: 'high' } },
+          { type: 'image_url', image_url: { url: 'data:' + inspoMime  + ';base64,' + inspoB64,  detail: 'high' } }
+        ]
+      }
+    ]
+  };
+
+  var res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + openaiKey },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    var errText = await res.text();
+    throw new Error('OpenAI ' + res.status + ': ' + errText.slice(0, 300));
+  }
+
+  var data = await res.json();
+  var raw  = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  if (!raw) throw new Error('OpenAI returned an empty response');
+
+  // Strip any accidental markdown fences
+  var clean = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+
+  var parsed;
+  try { parsed = JSON.parse(clean); }
+  catch(e) { throw new Error('GPT-4o did not return valid JSON. Got: ' + clean.slice(0, 200)); }
+
+  if (!parsed.prompt || typeof parsed.prompt !== 'string') {
+    throw new Error('GPT-4o JSON missing "prompt" key. Got: ' + clean.slice(0, 200));
+  }
+
+  return parsed.prompt;
+}
+
+// ── Step 2: Submit task to Apixo Nano Banana 2 ───────────
+async function submitTask(apixoKey, prompt, avatarB64, avatarMime, inspoB64, inspoMime) {
+  var body = {
+    request_type: 'async',
+    input: {
+      mode:          'image-to-image',
+      prompt:        prompt,
+      image_urls:    [
+        'data:' + avatarMime + ';base64,' + avatarB64,
+        'data:' + inspoMime  + ';base64,' + inspoB64
+      ],
+      aspect_ratio:  'auto',
+      resolution:    '1K',
+      output_format: 'png'
+    }
+  };
+
+  var res = await fetch('https://api.apixo.ai/api/v1/generateTask/nano-banana-2', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + apixoKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    var errText = await res.text();
+    throw new Error('Apixo submit ' + res.status + ': ' + errText.slice(0, 300));
+  }
+
+  var data   = await res.json();
+  var taskId = data && data.data && data.data.taskId;
+  if (!taskId) throw new Error('Apixo: no taskId returned — ' + JSON.stringify(data).slice(0, 200));
+  return taskId;
+}
+
+// ── Step 3: Poll until done ───────────────────────────────
+async function pollTask(apixoKey, taskId) {
+  var MAX = 60, DELAY = 3000; // max 3 minutes
+  for (var i = 0; i < MAX; i++) {
+    await sleep(DELAY);
+    var res = await fetch(
+      'https://api.apixo.ai/api/v1/statusTask/nano-banana-2?taskId=' + taskId,
+      { headers: { 'Authorization': 'Bearer ' + apixoKey } }
+    );
+    if (!res.ok) throw new Error('Apixo poll ' + res.status);
+    var data = await res.json();
+    var task = data && data.data;
+    if (!task) throw new Error('Apixo poll: empty response');
+    if (task.state === 'success') {
+      var result;
+      try { result = JSON.parse(task.resultJson); }
+      catch(e) { throw new Error('Apixo: could not parse resultJson'); }
+      var url = result && result.resultUrls && result.resultUrls[0];
+      if (!url) throw new Error('Apixo: resultUrls is empty');
+      return url;
+    }
+    if (task.state === 'failed') {
+      throw new Error('Apixo task failed: ' + (task.failMsg || task.failCode || 'no reason given'));
+    }
+    // pending or processing — keep waiting
+  }
+  throw new Error('Apixo: timed out after 3 minutes');
+}
+
+// ── Main generate ─────────────────────────────────────────
+async function generate() {
+  var openaiKey = document.getElementById('openai-key').value.trim();
+  var apixoKey  = document.getElementById('apixo-key').value.trim();
+  var prefs     = document.getElementById('prefs').value.trim();
+
+  if (!openaiKey) return alert('Please enter your OpenAI API key.');
+  if (!apixoKey)  return alert('Please enter your Apixo.ai API key.');
+
+  var active = girls.filter(function(g){ return g.name && g.avatarFile; });
+  if (!active.length)     return alert('Add at least one girl with a name and avatar photo.');
+  if (!inspoFiles.length) return alert('Upload at least one inspiration photo.');
+
+  var btn = document.getElementById('gen-btn');
+  btn.disabled = true;
+  document.getElementById('log-inner').innerHTML = '';
+  setStatus('running');
+  renderSkeletons(active);
+  log('Starting: ' + active.length + ' girl(s) × ' + inspoFiles.length + ' inspiration photo(s)', 'info');
+
+  var ok = 0, bad = 0;
+
+  for (var gi = 0; gi < active.length; gi++) {
+    var girl = active[gi];
+    log('▸ ' + girl.name, 'info');
+
+    var avatarB64, avatarMime;
+    try {
+      avatarMime = girl.avatarFile.type || 'image/jpeg';
+      avatarB64  = await fileToBase64(girl.avatarFile);
+    } catch(e) {
+      log('  ✗ Could not read avatar: ' + e.message, 'err');
+      continue;
+    }
+
+    var done = 0;
+
+    for (var i = 0; i < inspoFiles.length; i++) {
+      var f     = inspoFiles[i];
+      var label = f.name.replace(/\.[^.]+$/, '');
+      try {
+        var inspoMime = f.type || 'image/jpeg';
+        var inspoB64  = await fileToBase64(f);
+
+        // Step 1
+        log('  [' + (i+1) + '/' + inspoFiles.length + '] Asking GPT-4o for prompt…');
+        var prompt = await buildPrompt(openaiKey, girl.name, avatarB64, avatarMime, inspoB64, inspoMime, prefs);
+        log('  Prompt: "' + prompt.slice(0, 90) + (prompt.length > 90 ? '…' : '') + '"');
+
+        // Step 2
+        log('  Submitting to Apixo Nano Banana 2…');
+        var taskId = await submitTask(apixoKey, prompt, avatarB64, avatarMime, inspoB64, inspoMime);
+        log('  Task: ' + taskId + ' — polling every 3s…');
+
+        // Step 3
+        var imageUrl = await pollTask(apixoKey, taskId);
+
+        placeImage(girl.id, i, imageUrl, label);
+        done++; ok++;
+        log('  ✓ Done (' + done + '/' + inspoFiles.length + ')', 'ok');
+        var cnt = document.getElementById('cnt-' + girl.id);
+        if (cnt) cnt.textContent = done + ' / ' + inspoFiles.length;
+
+      } catch(e) {
+        var msg = e.message || String(e);
+        log('  ✗ ' + msg, 'err');
+        placeError(girl.id, i, msg.slice(0, 150));
+        bad++;
+      }
+    }
+  }
+
+  setStatus(ok > 0 ? 'done' : 'error');
+  log('─── Finished. ' + ok + ' generated, ' + bad + ' failed. ───', ok > 0 ? 'ok' : 'err');
+  btn.disabled = false;
+}
+
+// Boot
+addGirl();
+</script>
+</body>
+</html>

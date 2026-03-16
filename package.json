@@ -1,0 +1,13 @@
+{
+  "name": "ai-influencer-studio",
+  "version": "1.0.0",
+  "description": "AI Influencer Studio - Generate consistent girl profiles at scale",
+  "scripts": {
+    "start": "npx serve . -p 3000",
+    "dev": "npx live-server --port=3000 --open=index.html"
+  },
+  "devDependencies": {
+    "serve": "^14.0.0",
+    "live-server": "^1.2.2"
+  }
+}
